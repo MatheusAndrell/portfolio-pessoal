@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout lang="pt">
+  <main id="main" class="nf container">
+    <p class="kicker">404 · event not found</p>
+    <h1 class="display">Este evento não está no log.</h1>
+    <p class="lead">This event is not in the log.</p>
+    <div class="nf__actions">
+      <a class="btn btn--solid" href="/pt/">Voltar ao início</a>
+      <a class="btn" href="/en/">Back to home</a>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .nf {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+  .nf h1 {
+    margin-top: 12px;
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    max-width: 16ch;
+  }
+  .nf__actions {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+</style>

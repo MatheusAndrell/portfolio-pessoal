@@ -1,0 +1,487 @@
+---
+import { careerEvents, ui, t, type Lang } from '../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const C = ui.career;
+const total = careerEvents.length;
+const defaultOpen = 'vmarket';
+
+
+const fmt = (ym: string) => ym.replace('-', '.');
+/** JSON indentado, com arrays numa linha só. */
+const json = (o: Record<string, unknown>, depth = 0): string => {
+  const pad = '  '.repeat(depth + 1);
+  const lines = Object.entries(o).map(([k, v]) => {
+    const val =
+      v && typeof v === 'object' && !Array.isArray(v)
+        ? json(v as Record<string, unknown>, depth + 1)
+        : JSON.stringify(v).replace(/","/g, '", "');
+    return `${pad}"${k}": ${val}`;
+  });
+  return `{\n${lines.join(',\n')}\n${'  '.repeat(depth)}}`;
+};
+---
+
+<section id="carreira" class="section container" aria-labelledby="career-title">
+  <div class="head" data-reveal>
+    <div>
+      <p class="kicker">{t(C.kicker, lang)}</p>
+      <h2 id="career-title" class="section-title">{t(C.title, lang)}</h2>
+      <p class="lead">{t(C.lead, lang)}</p>
+    </div>
+    <div class="head__actions">
+      <div class="replay-progress mono" aria-hidden="true">
+        <span class="replay-progress__bar"><span data-replay-bar></span></span>
+        <span data-replay-label>offset 0 → {total - 1}</span>
+      </div>
+      <button class="btn btn--orb" type="button" data-replay>
+        <span data-replay-text>{t(C.replay, lang)}</span>
+        <span class="btn__orb" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z"></path></svg>
+        </span>
+      </button>
+      <p class="sr-only" aria-live="polite" data-replay-status></p>
+    </div>
+  </div>
+
+  <ol class="log" data-log data-replaying-label={t(C.replaying, lang)} data-replay-label-text={t(C.replay, lang)}>
+    {
+      careerEvents.map((ev, i) => {
+        const offset = total - 1 - i;
+        const open = ev.id === defaultOpen;
+        const hasMore = ev.details.length > 0 || ev.metrics;
+        return (
+          <li class="ev" data-ev data-reveal style={`--reveal-delay: ${Math.min(i, 4) * 60}ms`}>
+            <div class="ev__row">
+              <span class="ev__offset mono" aria-hidden="true">
+                {String(offset).padStart(2, '0')}
+              </span>
+              <p class="ev__date display">
+                <time datetime={ev.timestamp}>
+                  {ev.timestamp.slice(0, 4)}
+                  <span class="ev__month">.{ev.timestamp.slice(5)}</span>
+                </time>
+                <span class="ev__end mono">
+                  {ev.end === null ? `→ ${t(C.now, lang)}` : ev.end ? `→ ${fmt(ev.end)}` : ''}
+                </span>
+              </p>
+              <div class="ev__who">
+                <p class="ev__type mono">
+                  {ev.type} <span class="ev__v">v{ev.version}</span>
+                </p>
+                <h3 class="ev__org">{ev.org}</h3>
+                <p class="ev__role">{t(ev.role, lang)}</p>
+              </div>
+              <p class="ev__summary">{t(ev.summary, lang)}</p>
+              {hasMore ? (
+                <button
+                  class="icon-btn ev__toggle"
+                  type="button"
+                  aria-expanded={open ? 'true' : 'false'}
+                  aria-controls={`ev-${ev.id}`}
+                  data-label-open={t(C.open, lang)}
+                  data-label-close={t(C.close, lang)}
+                  aria-label={`${open ? t(C.close, lang) : t(C.open, lang)}: ${ev.org}`}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path d="M12 5v14M5 12h14" class="ev__plus-v" />
+                    <path d="M5 12h14" />
+                  </svg>
+                </button>
+              ) : (
+                <span />
+              )}
+            </div>
+
+            {hasMore && (
+              <div class="ev__panel" id={`ev-${ev.id}`} data-open={open ? 'true' : 'false'}>
+                <div class="ev__panel-inner">
+                  <div class="ev__card">
+                    {ev.metrics && (
+                      <ul class="ev__metrics">
+                        {ev.metrics.map((m) => (
+                          <li>
+                            <span class="ev__metric display grad-text">{m.value}</span>
+                            <span class="ev__metric-label">{t(m.label, lang)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div class="ev__body">
+                      <ul class="ev__details">
+                        {ev.details.map((d) => (
+                          <li>{t(d, lang)}</li>
+                        ))}
+                      </ul>
+                      <pre class="ev__payload mono" aria-label="payload" tabindex="0"><code>{json({ type: ev.type, version: ev.version, ts: ev.timestamp, location: t(ev.location, lang), payload: ev.payload })}</code></pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </li>
+        );
+      })
+    }
+  </ol>
+</section>
+
+<script>
+  const log = document.querySelector<HTMLElement>('[data-log]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+  // expandir / recolher — um evento aberto por vez (accordion)
+  const toggles = [...(log?.querySelectorAll<HTMLButtonElement>('.ev__toggle') ?? [])];
+
+  function setOpen(btn: HTMLButtonElement, open: boolean) {
+    const panel = document.getElementById(btn.getAttribute('aria-controls') ?? '');
+    if (!panel) return;
+    btn.setAttribute('aria-expanded', String(open));
+    panel.dataset.open = String(open);
+    const org = btn.closest('[data-ev]')?.querySelector('.ev__org')?.textContent ?? '';
+    btn.setAttribute('aria-label', `${open ? btn.dataset.labelClose : btn.dataset.labelOpen}: ${org}`);
+  }
+
+  /** Mantém o botão clicado parado na tela enquanto o painel de cima fecha. */
+  function keepInPlace(btn: HTMLButtonElement) {
+    const startTop = btn.getBoundingClientRect().top;
+    const until = performance.now() + (reduce.matches ? 50 : 650);
+    const step = () => {
+      const delta = btn.getBoundingClientRect().top - startTop;
+      if (Math.abs(delta) > 0.5) window.scrollBy(0, delta);
+      if (performance.now() < until) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  toggles.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      if (open) {
+        toggles.forEach((other) => {
+          if (other !== btn && other.getAttribute('aria-expanded') === 'true') setOpen(other, false);
+        });
+        keepInPlace(btn);
+      }
+      setOpen(btn, open);
+    });
+  });
+
+  // replay: reproduz os eventos do mais antigo ao mais recente
+  const replayBtn = document.querySelector<HTMLButtonElement>('[data-replay]');
+  const replayText = document.querySelector<HTMLElement>('[data-replay-text]');
+  const bar = document.querySelector<HTMLElement>('[data-replay-bar]');
+  const label = document.querySelector<HTMLElement>('[data-replay-label]');
+  const status = document.querySelector<HTMLElement>('[data-replay-status]');
+  const items = [...(log?.querySelectorAll<HTMLElement>('[data-ev]') ?? [])].reverse();
+  let running = false;
+
+  replayBtn?.addEventListener('click', async () => {
+    if (running || !log) return;
+    running = true;
+    replayBtn.disabled = true;
+    const step = reduce.matches ? 120 : 650;
+    log.classList.add('is-replaying');
+    items.forEach((el) => el.classList.remove('is-played', 'is-current'));
+
+    for (let i = 0; i < items.length; i++) {
+      const el = items[i];
+      items.forEach((x) => x.classList.remove('is-current'));
+      el.classList.add('is-played', 'is-current');
+      // mantém o evento atual visível durante o replay
+      const r = el.getBoundingClientRect();
+      if (r.top < 90 || r.bottom > window.innerHeight - 40) {
+        el.scrollIntoView({ block: 'center', behavior: reduce.matches ? 'auto' : 'smooth' });
+      }
+      const pct = ((i + 1) / items.length) * 100;
+      if (bar) bar.style.width = `${pct}%`;
+      if (label) label.textContent = `offset ${i} / ${items.length - 1}`;
+      if (replayText) replayText.textContent = `${log.dataset.replayingLabel} ${i + 1}/${items.length}`;
+      if (status) status.textContent = `${i + 1}/${items.length}: ${el.querySelector('.ev__type')?.textContent?.trim()} — ${el.querySelector('.ev__org')?.textContent}`;
+      await new Promise((r) => setTimeout(r, step));
+    }
+
+    await new Promise((r) => setTimeout(r, reduce.matches ? 0 : 500));
+    items.forEach((x) => x.classList.remove('is-current', 'is-played'));
+    log.classList.remove('is-replaying');
+    if (replayText) replayText.textContent = log.dataset.replayLabelText ?? '';
+    if (label) label.textContent = `offset 0 → ${items.length - 1}`;
+    if (bar) bar.style.width = '0%';
+    replayBtn.disabled = false;
+    running = false;
+  });
+</script>
+
+<style>
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .head__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+  }
+  .replay-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--subtle);
+  }
+  .replay-progress__bar {
+    position: relative;
+    width: 120px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .replay-progress__bar span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    background: var(--grad-soft);
+    transition: width 0.4s var(--ease-out);
+  }
+  [data-replay]:disabled {
+    cursor: progress;
+  }
+
+  .log {
+    margin-top: 48px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ev {
+    border-top: 1px solid var(--line);
+    transition: opacity 0.45s var(--ease-out), transform 0.45s var(--ease-out);
+  }
+  .ev__row {
+    display: grid;
+    grid-template-columns: 44px clamp(220px, 26vw, 370px) minmax(0, 1fr) minmax(0, 1fr) 48px;
+    align-items: center;
+    gap: clamp(16px, 2.4vw, 32px);
+    padding-block: 28px;
+  }
+  .ev__offset {
+    font-size: 13px;
+    color: var(--subtle);
+  }
+  .ev__offset::after {
+    content: '';
+    display: block;
+    width: 26px;
+    height: 1px;
+    margin-top: 8px;
+    background: currentColor;
+  }
+  .ev__date {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ev__date time {
+    font-size: clamp(36px, 4.4vw, 60px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .ev__month {
+    color: var(--dim);
+  }
+  .ev__end {
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--subtle);
+    min-height: 1em;
+  }
+  .ev__type {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .ev__type { color: var(--accent-1); }
+  .ev__org {
+    margin-top: 8px;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .ev__role {
+    margin-top: 2px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .ev__summary {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .ev__toggle svg {
+    transition: transform 0.4s var(--ease-out);
+  }
+  .ev__plus-v {
+    transition: opacity 0.3s;
+  }
+  .ev__toggle[aria-expanded='true'] {
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    border-color: var(--btn-bg);
+  }
+  .ev__toggle[aria-expanded='true'] svg {
+    transform: rotate(180deg);
+  }
+  .ev__toggle[aria-expanded='true'] .ev__plus-v {
+    opacity: 0;
+  }
+
+  /* painel expansível (sem JS fica aberto) */
+  .ev__panel {
+    display: grid;
+    grid-template-rows: 1fr;
+  }
+  :global(.js) .ev__panel {
+    transition: grid-template-rows 0.55s var(--ease-out), visibility 0s linear 0s;
+  }
+  :global(.js) .ev__panel[data-open='false'] {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows 0.45s var(--ease-out), visibility 0s linear 0.45s;
+  }
+  .ev__panel-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ev__card {
+    position: relative;
+    margin-bottom: 28px;
+    padding: clamp(20px, 3vw, 36px);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .ev__card::before {
+    content: '';
+    position: absolute;
+    inset: auto -10% -60% -10%;
+    height: 90%;
+    background: var(--grad);
+    filter: blur(70px);
+    opacity: 0.22;
+    pointer-events: none;
+  }
+  .ev__metrics {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .ev__metrics li {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+    border: 1px solid var(--line);
+  }
+  .ev__metric {
+    font-size: clamp(28px, 3vw, 36px);
+    font-weight: 800;
+    line-height: 1.1;
+  }
+  .ev__metric-label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .ev__body {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 24px;
+  }
+  .ev__details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .ev__details li {
+    position: relative;
+    padding-left: 22px;
+  }
+  .ev__details li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 10px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--grad-soft);
+  }
+  .ev__payload {
+    margin: 0;
+    padding: 18px;
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    border: 1px solid var(--line);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* replay */
+  .log:global(.is-replaying) .ev {
+    opacity: 0.3;
+    transform: translateX(-6px);
+  }
+  .log:global(.is-replaying) .ev:global(.is-played) {
+    opacity: 0.7;
+    transform: none;
+  }
+  .log:global(.is-replaying) .ev:global(.is-current) {
+    opacity: 1;
+  }
+  .ev:global(.is-current) .ev__offset {
+    color: var(--accent-2);
+  }
+  .ev:global(.is-current) time {
+    animation: stamp 0.55s var(--ease-out);
+  }
+  @keyframes stamp {
+    from { transform: translateY(14px); opacity: 0; filter: blur(4px); }
+  }
+
+  @media (max-width: 1000px) {
+    .ev__row {
+      grid-template-columns: 36px minmax(0, 1fr) 48px;
+      grid-template-areas:
+        'off date btn'
+        'off who  who'
+        'off sum  sum';
+      row-gap: 10px;
+    }
+    .ev__offset { grid-area: off; align-self: start; padding-top: 10px; }
+    .ev__date { grid-area: date; flex-direction: row; align-items: baseline; gap: 14px; }
+    .ev__who { grid-area: who; }
+    .ev__summary { grid-area: sum; }
+    .ev__toggle, .ev__row > span:last-child { grid-area: btn; }
+    .ev__body { grid-template-columns: 1fr; }
+    .head__actions { align-items: flex-start; }
+  }
+  @media (max-width: 520px) {
+    .ev__row { grid-template-columns: 0 minmax(0, 1fr) 48px; column-gap: 12px; }
+    .ev__offset { visibility: hidden; }
+  }
+</style>

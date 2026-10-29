@@ -1,0 +1,247 @@
+---
+import { ui, t, type Lang } from '../data/profile';
+import LangToggle from './LangToggle.astro';
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+
+const links = [
+  { id: 'pipeline', label: ui.nav.pipeline },
+  { id: 'carreira', label: ui.nav.career },
+  { id: 'projetos', label: ui.nav.projects },
+  { id: 'stack', label: ui.nav.stack },
+  { id: 'formacao', label: ui.nav.education },
+];
+---
+
+<header class="site-header" data-header>
+  <div class="container">
+    <div class="bar">
+      <a class="brand display" href={`/${lang}/`}>
+        <span class="brand__dot" aria-hidden="true"></span>
+        ANDRELL
+      </a>
+
+      <nav class="nav" id="site-nav" aria-label={t(ui.nav.sections, lang)} data-nav>
+        <ul>
+          {
+            links.map((l) => (
+              <li>
+                <a href={`#${l.id}`} data-spy={l.id}>
+                  {t(l.label, lang)}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="actions">
+        <LangToggle lang={lang} />
+        <ThemeToggle lang={lang} />
+        <a class="btn btn--grad cta" href="#contato">{t(ui.nav.contact, lang)}</a>
+        <button class="icon-btn menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" data-menu>
+          <span class="sr-only">{t(ui.nav.menu, lang)}</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path class="l1" d="M4 8h16"></path>
+            <path class="l2" d="M4 16h16"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const menu = document.querySelector<HTMLButtonElement>('[data-menu]');
+  const nav = document.querySelector<HTMLElement>('[data-nav]');
+
+  // Fundo do cabeçalho só aparece depois de rolar.
+  const onScroll = () => header?.classList.toggle('is-scrolled', window.scrollY > 24);
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  // Menu móvel.
+  const setOpen = (open: boolean) => {
+    menu?.setAttribute('aria-expanded', String(open));
+    header?.classList.toggle('is-open', open);
+  };
+  menu?.addEventListener('click', () => setOpen(menu.getAttribute('aria-expanded') !== 'true'));
+  nav?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && header?.classList.contains('is-open')) {
+      setOpen(false);
+      menu?.focus();
+    }
+  });
+
+  // Destaca a seção visível no menu.
+  const spyLinks = document.querySelectorAll<HTMLAnchorElement>('[data-spy]');
+  const sections = [...spyLinks]
+    .map((a) => document.getElementById(a.dataset.spy ?? ''))
+    .filter((s): s is HTMLElement => !!s);
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          spyLinks.forEach((a) => {
+            if (a.dataset.spy === entry.target.id) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+        }
+      },
+      { rootMargin: '-45% 0px -50% 0px' },
+    );
+    sections.forEach((s) => io.observe(s));
+  }
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    padding-top: 16px;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 6px 6px 22px;
+    border-radius: var(--pill);
+    border: 1px solid var(--line);
+    background: var(--glass);
+    transition: background-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+  }
+  .is-scrolled .bar {
+    background: color-mix(in srgb, var(--bg) 78%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: 0 10px 40px -20px rgba(0, 0, 0, 0.5);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    min-height: 44px;
+  }
+  .brand__dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--grad);
+    box-shadow: 0 0 18px rgba(255, 61, 127, 0.7);
+  }
+  .nav ul {
+    display: flex;
+    gap: 2px;
+  }
+  .nav a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: var(--pill);
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--muted);
+    transition: color 0.25s, background-color 0.25s;
+  }
+  .nav a:hover {
+    color: var(--text);
+  }
+  .nav a[aria-current='true'] {
+    color: var(--btn-fg);
+    background: var(--btn-bg);
+    font-weight: 600;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .cta {
+    min-height: 46px;
+  }
+  .menu-btn {
+    display: none;
+  }
+  .menu-btn path {
+    transition: transform 0.3s var(--ease-out);
+    transform-origin: center;
+  }
+  .is-open .menu-btn .l1 {
+    transform: translateY(4px) rotate(45deg);
+  }
+  .is-open .menu-btn .l2 {
+    transform: translateY(-4px) rotate(-45deg);
+  }
+
+  @media (max-width: 1100px) {
+    .cta {
+      display: none;
+    }
+  }
+  @media (max-width: 900px) {
+    .bar {
+      flex-wrap: wrap;
+      border-radius: 28px;
+    }
+    .menu-btn {
+      display: inline-grid;
+    }
+    .nav {
+      order: 3;
+      flex-basis: 100%;
+      display: none;
+    }
+    .is-open .nav {
+      display: block;
+    }
+    .nav ul {
+      flex-direction: column;
+      padding: 6px 4px 10px 0;
+    }
+    .nav a {
+      width: 100%;
+      font-size: 16px;
+    }
+    .is-open .bar {
+      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+    }
+  }
+  @media (max-width: 420px) {
+    .bar {
+      padding-left: 16px;
+      gap: 8px;
+    }
+    .brand {
+      font-size: 14px;
+      gap: 8px;
+    }
+    .actions {
+      gap: 4px;
+    }
+    .actions :global(.icon-btn) {
+      width: 44px;
+      height: 44px;
+    }
+    .actions :global(.lang a) {
+      min-width: 36px;
+    }
+  }
+</style>

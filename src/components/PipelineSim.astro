@@ -1,0 +1,460 @@
+---
+import { ui, t, type Lang } from '../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const P = ui.pipeline;
+
+const strings = {
+  online: t(P.online, lang),
+  offline: t(P.offline, lang),
+  idle: t(P.idle, lang),
+  waiting: t(P.waiting, lang),
+  queued: t(P.queued, lang),
+  brokerDown: t(P.brokerDown, lang),
+  brokerUp: t(P.brokerUp, lang),
+  traceEmpty: t(P.traceEmpty, lang),
+  log: Object.fromEntries(Object.entries(P.log).map(([k, v]) => [k, t(v, lang)])),
+};
+
+const nodes = [
+  { id: 'api', role: 'producer', name: 'api', status: 'POST /events' },
+  { id: 'outbox', role: 'tx outbox', name: 'outbox', status: `0 ${t(P.queued, lang)}`, dots: true },
+  { id: 'broker', role: 'broker', name: 'broker', status: t(P.online, lang) },
+  { id: 'worker', role: 'consumer', name: 'worker', status: t(P.idle, lang) },
+  { id: 'webhook', role: 'receiver', name: 'webhook', status: '~40 ms' },
+] as const;
+
+const counters = [
+  { key: 'delivered', label: P.delivered },
+  { key: 'pending', label: P.pending },
+  { key: 'retries', label: P.retries },
+  { key: 'dlq', label: P.dlq },
+] as const;
+---
+
+<section id="pipeline" class="section container" aria-labelledby="pipeline-title">
+  <div data-reveal>
+    <p class="kicker">{t(P.kicker, lang)}</p>
+    <h2 id="pipeline-title" class="section-title">{t(P.title, lang)}</h2>
+    <p class="lead">{t(P.lead, lang)}</p>
+  </div>
+
+  <figure class="sim grad-border" data-sim data-strings={JSON.stringify(strings)} data-reveal style="--reveal-delay: 120ms">
+    <div class="grad-border__inner">
+      <div class="sim__stage" data-stage>
+        <svg class="sim__wires" data-wires aria-hidden="true"></svg>
+
+        {
+          nodes.map((n) => (
+            <div class={`node node--${n.id}`} data-node={n.id}>
+              <span class="node__role mono">{n.role}</span>
+              <span class="node__name display">{n.name}</span>
+              <span class="node__status mono" data-status>
+                {n.status}
+              </span>
+              {'dots' in n && <span class="node__dots" data-dots aria-hidden="true" />}
+            </div>
+          ))
+        }
+
+        <div class="node node--dlq" data-node="dlq">
+          <span class="node__role mono">dead letter</span>
+          <span class="node__row">
+            <span class="node__name display">dlq · <span data-status>0</span></span>
+            <button class="btn btn--solid replay-btn" type="button" data-action="replay" disabled>{t(P.replay, lang)}</button>
+          </span>
+        </div>
+
+        <div class="sim__tokens" data-tokens aria-hidden="true"></div>
+      </div>
+
+      <dl class="sim__counters">
+        {
+          counters.map((c) => (
+            <div class={`counter counter--${c.key}`}>
+              <dt class="mono">{t(c.label, lang)}</dt>
+              <dd class="display" data-count={c.key}>
+                0
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+
+      <div class="sim__controls" role="group" aria-label={lang === 'pt' ? 'Controles da simulação' : 'Simulation controls'}>
+        <button class="btn btn--grad btn--orb emit-btn" type="button" data-action="emit">
+          {t(P.emit, lang)}
+          <span class="btn__orb" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"></path></svg>
+          </span>
+        </button>
+        <button class="btn" type="button" data-action="broker" aria-pressed="false"><span>{t(P.brokerDown, lang)}</span></button>
+        <button class="btn" type="button" data-action="slow" aria-pressed="false">{t(P.slow, lang)}</button>
+        <button class="btn" type="button" data-action="invalid">{t(P.invalid, lang)}</button>
+        <button class="btn btn--ghost reset-btn" type="button" data-action="reset">{t(P.reset, lang)}</button>
+      </div>
+
+      <div role="log" aria-live="polite" aria-label="Trace">
+        <ol class="sim__trace mono" data-trace>
+          <li class="trace__empty">{t(P.traceEmpty, lang)}</li>
+        </ol>
+      </div>
+    </div>
+  </figure>
+  <p class="sim__note mono">{t(P.note, lang)}</p>
+</section>
+
+<script>
+  import { initPipeline } from '../scripts/pipeline';
+  const el = document.querySelector<HTMLElement>('[data-sim]');
+  if (el) initPipeline(el);
+</script>
+
+<style>
+  .sim {
+    margin-top: 48px;
+  }
+
+  /* ---------- palco ---------- */
+  .sim__stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-areas:
+      'api outbox broker worker webhook'
+      '.   .      .      dlq    .';
+    column-gap: clamp(28px, 4.5vw, 72px);
+    row-gap: 44px;
+    padding: clamp(32px, 5vw, 56px) clamp(20px, 3vw, 40px) 28px;
+  }
+  .sim__wires {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .sim__wires :global(.wire) {
+    fill: none;
+    stroke: var(--line-strong);
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: stroke 0.3s;
+  }
+  .sim__wires :global(.wire--dashed) {
+    stroke-dasharray: 5 6;
+  }
+  .sim__wires :global(.wire.is-active) {
+    stroke: #ff5c93;
+    filter: drop-shadow(0 0 6px rgba(255, 92, 147, 0.8));
+  }
+  .sim__tokens {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .sim__tokens :global(.token) {
+    position: absolute;
+    left: -7px;
+    top: -7px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 5px rgba(255, 92, 147, 0.25), 0 0 22px #ff5c93;
+    will-change: transform;
+  }
+  .sim__tokens :global(.token--invalid),
+  .sim__tokens :global(.token--dead) {
+    background: #ff5c93;
+    box-shadow: 0 0 0 5px rgba(255, 92, 147, 0.2), 0 0 18px #ff3d7f;
+  }
+  .sim__tokens :global(.token--retry) {
+    background: #ffa24d;
+    box-shadow: 0 0 0 5px rgba(255, 162, 77, 0.25), 0 0 18px #ffa24d;
+  }
+
+  /* ---------- nós ---------- */
+  .node {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    transition: border-color 0.3s, background-color 0.3s, opacity 0.3s, box-shadow 0.3s;
+  }
+  .node--api { grid-area: api; }
+  .node--outbox { grid-area: outbox; }
+  .node--broker { grid-area: broker; }
+  .node--worker { grid-area: worker; }
+  .node--webhook { grid-area: webhook; }
+  .node--dlq { grid-area: dlq; padding: 12px 12px 12px 16px; }
+  .node--dlq .node__name { font-size: 16px; white-space: nowrap; }
+
+  .node__role {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+  .node__name {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .node__status {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+  .node__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .node__dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 8px;
+  }
+  .node__dots :global(i) {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffa24d;
+    box-shadow: 0 0 8px rgba(255, 162, 77, 0.8);
+    animation: dot-in 0.3s var(--ease-out);
+  }
+  .replay-btn {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+  }
+  .replay-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  /* estados */
+  .node--worker {
+    border-color: transparent;
+    background: linear-gradient(var(--surface-2), var(--surface-2)) padding-box, var(--grad-soft) border-box;
+  }
+  .node--worker:global(.is-busy) {
+    box-shadow: 0 0 40px -6px rgba(255, 61, 127, 0.55);
+  }
+  .node--worker:global(.is-retrying) .node__status {
+    color: var(--accent-3);
+  }
+  .node--outbox:global(.is-holding) {
+    border-color: #ffa24d;
+    box-shadow: 0 0 34px -10px rgba(255, 162, 77, 0.7);
+  }
+  .node--broker:global(.is-down) {
+    border-style: dashed;
+    border-color: var(--line-strong);
+    background: transparent;
+  }
+  .node--broker:global(.is-down) .node__name {
+    text-decoration: line-through;
+    text-decoration-color: #ff5c93;
+    color: var(--subtle);
+  }
+  .node--broker:global(.is-down) .node__status {
+    color: var(--accent-2);
+  }
+  .node--webhook:global(.is-slow) {
+    border-style: dashed;
+    border-color: var(--line-strong);
+  }
+  .node--dlq:global(.has-items) {
+    border-color: rgba(255, 92, 147, 0.6);
+  }
+  .node:global(.is-hit) { animation: hit 0.45s var(--ease-out); }
+  .node:global(.is-ok) { animation: ok 0.7s var(--ease-out); }
+  .node:global(.is-fail) { animation: fail 0.5s var(--ease-out); }
+  .node:global(.is-alarm) { animation: alarm 0.7s var(--ease-out); }
+
+  @keyframes hit {
+    50% { transform: scale(1.04); }
+  }
+  @keyframes ok {
+    30% { box-shadow: 0 0 0 4px rgba(120, 230, 170, 0.35), 0 0 30px rgba(120, 230, 170, 0.5); }
+  }
+  @keyframes fail {
+    20%, 60% { transform: translateX(-4px); }
+    40%, 80% { transform: translateX(4px); }
+  }
+  @keyframes alarm {
+    30% { box-shadow: 0 0 0 4px rgba(255, 92, 147, 0.35), 0 0 30px rgba(255, 92, 147, 0.6); }
+  }
+  @keyframes dot-in {
+    from { transform: scale(0); }
+  }
+
+  /* ---------- contadores ---------- */
+  .sim__counters {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    padding: 8px clamp(20px, 3vw, 40px) 24px;
+  }
+  .counter {
+    padding: 16px 20px;
+    border-radius: 18px;
+    background: var(--glass);
+    border: 1px solid var(--line);
+  }
+  .counter dt {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+  .counter dd {
+    margin: 6px 0 0;
+    font-size: clamp(26px, 3vw, 36px);
+    font-weight: 600;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter--retries dd { color: var(--accent-3); }
+  .counter--dlq dd { color: var(--accent-2); }
+  .counter dd:global(.is-pop) {
+    animation: pop 0.45s var(--ease-out);
+  }
+  @keyframes pop {
+    40% { transform: translateY(-4px) scale(1.08); }
+  }
+
+  /* ---------- controles ---------- */
+  .sim__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 0 clamp(20px, 3vw, 40px) 28px;
+  }
+  .emit-btn {
+    padding: 5px 5px 5px 22px;
+  }
+  .emit-btn:hover .btn__orb {
+    transform: rotate(90deg);
+  }
+  .reset-btn {
+    margin-left: auto;
+    border-color: transparent;
+    color: var(--muted);
+  }
+  .reset-btn:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+  }
+
+  /* ---------- trace ---------- */
+  .sim__trace {
+    margin: 0;
+    padding: 18px clamp(20px, 3vw, 40px) 22px;
+    list-style: none;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    line-height: 2;
+    min-height: calc(6 * 24px + 40px);
+    overflow-x: auto;
+  }
+  .sim__trace :global(.trace__row) {
+    display: grid;
+    grid-template-columns: 96px 92px 150px minmax(0, 1fr);
+    gap: 14px;
+    white-space: nowrap;
+    min-width: 560px;
+    animation: row-in 0.35s var(--ease-out);
+  }
+  .sim__trace :global(.trace__ts) { color: var(--subtle); }
+  .sim__trace :global(.trace__id) { color: var(--muted); }
+  .sim__trace :global(.trace__type) { color: var(--text-2); }
+  .sim__trace :global(.trace__msg) { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .sim__trace :global(.trace__row--ok .trace__msg) { color: var(--accent-1); }
+  .sim__trace :global(.trace__row--warn .trace__msg) { color: var(--accent-3); }
+  .sim__trace :global(.trace__row--err .trace__msg) { color: var(--accent-2); }
+  .sim__trace :global(.trace__empty) { color: var(--subtle); }
+  @keyframes row-in {
+    from { opacity: 0; transform: translateY(-6px); }
+  }
+
+  .sim__note {
+    margin-top: 14px;
+    font-size: 11px;
+    color: var(--subtle);
+  }
+
+  /* ---------- responsivo ---------- */
+  @media (max-width: 900px) {
+    .sim__stage {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+      grid-template-areas:
+        'api     .'
+        'outbox  .'
+        'broker  .'
+        'worker  dlq'
+        'webhook .';
+      row-gap: 28px;
+      column-gap: 28px;
+    }
+    .node {
+      padding: 12px 14px;
+    }
+    .node--dlq .node__row {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .sim__counters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .reset-btn {
+      margin-left: 0;
+    }
+  }
+  @media (max-width: 520px) {
+    .sim__controls .btn {
+      flex: 1 1 calc(50% - 10px);
+      padding-inline: 10px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .sim__trace :global(.trace__row) {
+      grid-template-columns: 92px 140px minmax(0, 1fr);
+      min-width: 0;
+      gap: 10px;
+    }
+    .sim__trace :global(.trace__id) {
+      display: none;
+    }
+    .sim__trace :global(.trace__msg) {
+      grid-column: 1 / -1;
+      margin-top: -6px;
+      padding-bottom: 4px;
+    }
+    .sim__controls .emit-btn {
+      flex-basis: 100%;
+      justify-content: space-between;
+    }
+  }
+</style>

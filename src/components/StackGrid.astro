@@ -1,0 +1,105 @@
+---
+import { stack, ui, t, type Lang } from '../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+---
+
+<section id="stack" class="section container" aria-labelledby="stack-title">
+  <div data-reveal>
+    <p class="kicker">{t(ui.stack.kicker, lang)}</p>
+    <h2 id="stack-title" class="section-title">{t(ui.stack.title, lang)}</h2>
+  </div>
+
+  <div class="stack">
+    {
+      stack.map((group, gi) => (
+        <section class="group" data-reveal style={`--reveal-delay: ${gi * 60}ms`} aria-labelledby={`stack-${group.id}`}>
+          <h3 id={`stack-${group.id}`} class="group__title mono">
+            <span class="group__index">{String(gi + 1).padStart(2, '0')}</span>
+            {t(group.title, lang)}
+          </h3>
+          <ul class="group__items">
+            {group.items.map((item, i) => (
+              <li class:list={['chip', { 'chip--hot': group.highlight?.includes(item) }]} style={`--i: ${i}`}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .stack {
+    margin-top: 44px;
+    border-top: 1px solid var(--line);
+  }
+  .group {
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    padding-block: 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  .group__title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-top: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .group__index {
+    color: var(--subtle);
+  }
+  .group__items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    transition: transform 0.3s var(--ease-out), border-color 0.3s, background-color 0.3s;
+  }
+  .chip:hover {
+    transform: translateY(-2px);
+    border-color: var(--line-strong);
+  }
+
+  /* chips entram em cascata junto com o grupo */
+  :global(.js) .group[data-reveal] .chip {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
+    transition-delay: calc(var(--reveal-delay, 0ms) + var(--i) * 35ms + 120ms);
+  }
+  :global(.js) .group[data-reveal]:global(.is-visible) .chip {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (max-width: 720px) {
+    .group {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .group__title {
+      padding-top: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.js) .group[data-reveal] .chip {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>

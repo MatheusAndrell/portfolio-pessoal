@@ -1,0 +1,263 @@
+---
+import { identity, ui, t, type Lang } from '../data/profile';
+import LiquidBlob from './LiquidBlob.astro';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const C = ui.contact;
+const c = identity.contact;
+
+const links = [
+  { label: 'LinkedIn', value: c.linkedinLabel, href: c.linkedin },
+  { label: 'GitHub', value: c.githubLabel, href: c.github },
+];
+---
+
+<section id="contato" class="section container contact" aria-labelledby="contact-title">
+  <div class="contact__art" aria-hidden="true">
+    <LiquidBlob id="contact" variant="contact" />
+  </div>
+
+  <div class="contact__copy" data-reveal>
+    <p class="kicker">{t(C.kicker, lang)}</p>
+    <h2 id="contact-title" class="section-title">{t(C.title, lang)}</h2>
+    <p class="lead">{t(C.lead, lang)}</p>
+
+    <ul class="links">
+      <li class="link link--mail">
+        <a href={`mailto:${c.email}`} class="link__main">
+          <span class="link__label mono">{t(C.email, lang)}</span>
+          <span class="link__value">{c.email}</span>
+        </a>
+        <button class="icon-btn link__copy" type="button" data-copy={c.email} data-copied={t(C.copied, lang)} aria-label={t(C.copy, lang)}>
+          <svg class="i-copy" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V6a2 2 0 0 1 2-2h9"></path></svg>
+          <svg class="i-ok" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+        </button>
+      </li>
+      <li class="link link--cv">
+        <div class="link__main link__main--static">
+          <span class="link__label mono">{t(C.resume, lang)}</span>
+          <span class="link__value"><span class="cv-short">{t(C.resume, lang)} (PDF)</span><span class="cv-hint">{t(C.resumeHint, lang)}</span></span>
+          <span class="cv-btns">
+            {
+              [...identity.resumes]
+                .sort((a, b) => (a.lang === lang ? -1 : b.lang === lang ? 1 : 0))
+                .map((r) => (
+                  <a
+                    class:list={['cv-btn mono', { 'is-primary': r.lang === lang }]}
+                    href={r.href}
+                    download
+                    type="application/pdf"
+                    hreflang={r.lang === 'pt' ? 'pt-BR' : 'en'}
+                    aria-label={`${t(C.download, lang)} ${r.label} (PDF)`}
+                  >
+                    {r.lang.toUpperCase()}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+                  </a>
+                ))
+            }
+          </span>
+        </div>
+      </li>
+      {
+        links.map((l) => (
+          <li class="link">
+            <a href={l.href} class="link__main" target="_blank" rel="noopener noreferrer">
+              <span class="link__label mono">{l.label}</span>
+              <span class="link__value">{l.value}</span>
+              <span class="link__orb" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8" /></svg>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="sr-only" aria-live="polite" data-copy-status></p>
+  </div>
+</section>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('[data-copy]');
+  const status = document.querySelector<HTMLElement>('[data-copy-status]');
+  btn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy ?? '');
+      btn.classList.add('is-done');
+      if (status) status.textContent = btn.dataset.copied ?? '';
+      setTimeout(() => btn.classList.remove('is-done'), 1800);
+    } catch {
+      location.href = `mailto:${btn.dataset.copy}`;
+    }
+  });
+</script>
+
+<style>
+  .contact {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 32px;
+    padding-bottom: clamp(60px, 8vw, 100px);
+  }
+  .contact__art {
+    aspect-ratio: 1;
+    max-width: 480px;
+    width: 100%;
+  }
+  .links {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .link__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 60px;
+    padding: 6px 6px 6px 24px;
+    border-radius: var(--pill);
+    background: var(--glass);
+    border: 1px solid var(--line-strong);
+    text-decoration: none;
+    transition: border-color 0.3s, background-color 0.3s;
+  }
+  .link--mail .link__main {
+    padding-right: 24px;
+  }
+  .link__main:hover {
+    border-color: var(--text);
+  }
+  .link__label {
+    flex: none;
+    width: 76px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+  .link__value {
+    flex: 1;
+    min-width: 0;
+    font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .link__orb {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    transition: transform 0.35s var(--ease-out), background-color 0.3s, color 0.3s;
+  }
+  .link__main:hover .link__orb {
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    transform: rotate(45deg);
+  }
+  .link__main--static:hover {
+    border-color: var(--line-strong);
+  }
+  .link--cv .link__main {
+    padding-right: 6px;
+  }
+  .cv-btns {
+    flex: none;
+    display: flex;
+    gap: 6px;
+  }
+  .cv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: var(--pill);
+    border: 1px solid var(--line-strong);
+    font-size: 13px;
+    text-decoration: none;
+    transition: background-color 0.25s, color 0.25s, border-color 0.25s;
+  }
+  .cv-btn svg {
+    transition: transform 0.35s var(--ease-out);
+  }
+  .cv-btn:hover {
+    border-color: var(--text);
+  }
+  .cv-btn:hover svg {
+    transform: translateY(2px);
+  }
+  .cv-btn.is-primary {
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    border-color: var(--btn-bg);
+  }
+  .link__copy {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    flex: none;
+  }
+  .link__copy svg {
+    transition: opacity 0.25s, transform 0.35s var(--ease-out);
+  }
+  .link__copy .i-ok {
+    position: absolute;
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  .link__copy:global(.is-done) {
+    background: var(--grad-soft);
+    color: var(--on-grad);
+    border-color: transparent;
+  }
+  .link__copy:global(.is-done) .i-copy {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  .link__copy:global(.is-done) .i-ok {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (max-width: 860px) {
+    .contact {
+      grid-template-columns: 1fr;
+    }
+    .contact__art {
+      max-width: 280px;
+      margin: 0 auto -20px;
+    }
+  }
+  .cv-short {
+    display: none;
+  }
+  @media (max-width: 480px) {
+    .link__label {
+      display: none;
+    }
+    .cv-short {
+      display: inline;
+    }
+    .cv-hint {
+      display: none;
+    }
+    .link__main {
+      padding-left: 20px;
+    }
+  }
+</style>

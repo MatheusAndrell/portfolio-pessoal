@@ -1,0 +1,241 @@
+---
+import { education, certificates, identity, ui, t, type Lang } from '../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const E = ui.education;
+
+const byDateDesc = (a: { date: string }, b: { date: string }) => b.date.localeCompare(a.date);
+const featured = certificates.filter((c) => c.featured).sort(byDateDesc);
+const others = certificates.filter((c) => !c.featured).sort(byDateDesc);
+const year = (ym: string) => ym.slice(0, 4);
+---
+
+<section id="formacao" class="section container" aria-labelledby="edu-title">
+  <div data-reveal>
+    <p class="kicker">{t(E.kicker, lang)}</p>
+    <h2 id="edu-title" class="section-title">{t(E.title, lang)}</h2>
+  </div>
+
+  <div class="edu">
+    <div class="edu__side">
+      {
+        education.map((e, i) => (
+          <article class="card school" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
+            {e.ongoing ? (
+              <span class="badge mono">{t(E.ongoing, lang)}</span>
+            ) : (
+              <span class="school__years mono">
+                {year(e.start)}–{year(e.end)}
+              </span>
+            )}
+            <h3 class="school__name display">{e.institution}</h3>
+            <p class="school__course">{t(e.course, lang)}</p>
+            {e.ongoing && (
+              <p class="school__years mono">
+                {e.start.replace('-', '.')} → {e.end.replace('-', '.')}
+              </p>
+            )}
+          </article>
+        ))
+      }
+
+      <article class="card langs" data-reveal style="--reveal-delay: 160ms" aria-labelledby="langs-title">
+        <h3 id="langs-title" class="kicker">{t(E.languages, lang)}</h3>
+        <dl>
+          {
+            identity.languages.map((l) => (
+              <div>
+                <dt>{t(l.name, lang)}</dt>
+                <dd class="mono">{t(l.level, lang)}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </article>
+    </div>
+
+    <article class="card certs" data-reveal style="--reveal-delay: 120ms" aria-labelledby="certs-title">
+      <div class="certs__head">
+        <h3 id="certs-title" class="certs__title display">{t(E.certs, lang)}</h3>
+        <span class="mono certs__count">{featured.length} {t(E.featuredOf, lang)} {certificates.length}</span>
+      </div>
+      <ul class="certs__list">
+        {
+          featured.map((c) => (
+            <li>
+              <span class="certs__name">{c.title}</span>
+              <span class="certs__meta mono">
+                {c.issuer} · {year(c.date)}
+              </span>
+            </li>
+          ))
+        }
+      </ul>
+      <details class="certs__more">
+        <summary class="btn btn--orb">
+          <span>{t(E.showAll, lang)} ({certificates.length})</span>
+          <span class="btn__orb" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14" class="plus-v"></path><path d="M5 12h14"></path></svg>
+          </span>
+        </summary>
+        <ul class="certs__list certs__list--more">
+          {
+            others.map((c) => (
+              <li>
+                <span class="certs__name">{c.title}</span>
+                <span class="certs__meta mono">
+                  {c.issuer} · {year(c.date)}
+                </span>
+              </li>
+            ))
+          }
+        </ul>
+      </details>
+    </article>
+  </div>
+</section>
+
+<style>
+  .edu {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .edu__side {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .school {
+    padding: 26px;
+  }
+  .badge {
+    display: inline-block;
+    padding: 5px 11px;
+    border-radius: var(--pill);
+    background: var(--grad-soft);
+    color: var(--on-grad);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .school__years {
+    font-size: 12px;
+    color: var(--subtle);
+  }
+  .school__name {
+    margin-top: 14px;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .school__course {
+    margin: 6px 0 8px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .langs {
+    padding: 26px;
+  }
+  .langs dl {
+    margin: 14px 0 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .langs dt {
+    font-size: 13px;
+    color: var(--subtle);
+  }
+  .langs dd {
+    margin: 4px 0 0;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--font-body);
+  }
+
+  .certs {
+    padding: clamp(24px, 3vw, 34px);
+  }
+  .certs__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .certs__title {
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .certs__count {
+    font-size: 12px;
+    color: var(--subtle);
+  }
+  .certs__list {
+    margin-top: 18px;
+  }
+  .certs__list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding-block: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .certs__meta {
+    flex: none;
+    font-size: 11px;
+    color: var(--subtle);
+    white-space: nowrap;
+  }
+  .certs__more {
+    margin-top: 18px;
+  }
+  .certs__more summary {
+    list-style: none;
+    width: fit-content;
+    padding: 5px 5px 5px 18px;
+    font-size: 13px;
+  }
+  .certs__more summary::-webkit-details-marker {
+    display: none;
+  }
+  .certs__more summary .btn__orb {
+    width: 34px;
+    height: 34px;
+  }
+  .certs__more summary svg {
+    transition: transform 0.4s var(--ease-out);
+  }
+  .certs__more[open] summary svg {
+    transform: rotate(180deg);
+  }
+  .certs__more[open] .plus-v {
+    opacity: 0;
+  }
+  .certs__more[open] .certs__list--more {
+    animation: open 0.45s var(--ease-out);
+  }
+  @keyframes open {
+    from { opacity: 0; transform: translateY(-8px); }
+  }
+
+  @media (max-width: 900px) {
+    .edu {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 520px) {
+    .certs__list li {
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+</style>

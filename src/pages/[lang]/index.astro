@@ -1,0 +1,33 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteHeader from '../../components/SiteHeader.astro';
+import Hero from '../../components/Hero.astro';
+import PipelineSim from '../../components/PipelineSim.astro';
+import EventLog from '../../components/EventLog.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import StackGrid from '../../components/StackGrid.astro';
+import Education from '../../components/Education.astro';
+import Contact from '../../components/Contact.astro';
+import SiteFooter from '../../components/SiteFooter.astro';
+import { LANGS, type Lang } from '../../data/profile';
+
+export function getStaticPaths() {
+  return LANGS.map((lang) => ({ params: { lang } }));
+}
+
+const lang = Astro.params.lang as Lang;
+---
+
+<BaseLayout lang={lang}>
+  <SiteHeader lang={lang} />
+  <main id="main" tabindex="-1">
+    <Hero lang={lang} />
+    <PipelineSim lang={lang} />
+    <EventLog lang={lang} />
+    <ProjectCard lang={lang} />
+    <StackGrid lang={lang} />
+    <Education lang={lang} />
+    <Contact lang={lang} />
+  </main>
+  <SiteFooter lang={lang} />
+</BaseLayout>

@@ -1,0 +1,357 @@
+---
+import { eventCore, volunteering, ui, t, type Lang } from '../data/profile';
+
+interface Props {
+  lang: Lang;
+}
+const { lang } = Astro.props;
+const P = ui.projects;
+---
+
+<section id="projetos" class="section container" aria-labelledby="projects-title">
+  <div data-reveal>
+    <p class="kicker">{t(P.kicker, lang)}</p>
+    <h2 id="projects-title" class="section-title">{t(P.title, lang)}</h2>
+  </div>
+
+  <article class="ec grad-border" data-reveal style="--reveal-delay: 100ms" aria-labelledby="ec-title">
+    <div class="grad-border__inner ec__inner">
+      <div class="ec__copy">
+        <ul class="ec__tags mono">
+          {eventCore.tags.map((tag) => <li class="chip">{tag}</li>)}
+        </ul>
+        <h3 id="ec-title" class="ec__name display">{eventCore.name}</h3>
+        <p class="ec__desc">{t(eventCore.description, lang)}</p>
+        <a class="btn btn--solid btn--orb ec__cta" href={eventCore.repo} target="_blank" rel="noopener noreferrer">
+          {t(P.github, lang)}
+          <span class="btn__orb" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"></path></svg>
+          </span>
+        </a>
+        <p class="ec__repo mono">github.com/MatheusAndrell/eventcore</p>
+      </div>
+
+      <figure class="arch" aria-labelledby="arch-cap">
+        <figcaption id="arch-cap" class="kicker">{t(P.architecture, lang)}</figcaption>
+        <ol class="arch__flow mono">
+          <li class="arch__node arch__node--edge">
+            <strong>{t(P.client, lang)}</strong><span>POST /events · Idempotency-Key</span>
+          </li>
+          <li class="arch__group">
+            <span class="arch__group-label">{t(P.monolith, lang)}</span>
+            <ol>
+              {
+                eventCore.architecture.map((n) => (
+                  <li class:list={['arch__node', { 'arch__node--store': n.store, 'arch__node--accent': n.accent }]}>
+                    <strong>{n.name}</strong>
+                    <span>{t(n.note, lang)}</span>
+                  </li>
+                ))
+              }
+            </ol>
+          </li>
+          <li class="arch__node arch__node--edge arch__node--end">
+            <strong>{t(P.endpoint, lang)}</strong><span>webhook-id · webhook-signature</span>
+          </li>
+        </ol>
+      </figure>
+    </div>
+  </article>
+
+  <ul class="guarantees">
+    {
+      eventCore.guarantees.map((g, i) => (
+        <li class="card guarantee" data-reveal style={`--reveal-delay: ${i * 80}ms`}>
+          <span class="guarantee__kicker mono">{t(g.kicker, lang)}</span>
+          <h4 class="guarantee__title">{t(g.title, lang)}</h4>
+          <p class="guarantee__body">{t(g.body, lang)}</p>
+        </li>
+      ))
+    }
+  </ul>
+
+  <article class="card vol" data-reveal aria-labelledby="vol-title">
+    <div class="vol__copy">
+      <p class="kicker">{t(volunteering.since, lang)}</p>
+      <h3 id="vol-title" class="vol__org display">{volunteering.org}</h3>
+      <p class="vol__role">{t(volunteering.role, lang)}</p>
+      <p class="vol__desc">{t(volunteering.description, lang)}</p>
+    </div>
+    <ul class="vol__stats">
+      {
+        volunteering.highlights.map((h) => (
+          <li>
+            <span class="vol__value display">{h.value}</span>
+            <span class="vol__label">{t(h.label, lang)}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </article>
+</section>
+
+<style>
+  .ec {
+    margin-top: 48px;
+  }
+  .ec__inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+  .ec__copy {
+    padding: clamp(28px, 4vw, 52px);
+  }
+  .ec__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ec__tags .chip {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  .ec__name {
+    margin-top: 26px;
+    font-size: clamp(44px, 6vw, 76px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1;
+  }
+  .ec__desc {
+    margin-top: 20px;
+    max-width: 52ch;
+    font-size: 17px;
+    color: var(--text-2);
+  }
+  .ec__cta {
+    margin-top: 32px;
+    padding: 5px 5px 5px 22px;
+  }
+  .ec__repo {
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--subtle);
+  }
+
+  /* diagrama */
+  .arch {
+    position: relative;
+    margin: 0;
+    padding: clamp(28px, 4vw, 48px);
+    background: radial-gradient(circle at 60% 45%, rgba(255, 61, 127, 0.2), transparent 65%);
+    border-left: 1px solid var(--line);
+  }
+  .arch__flow {
+    position: relative;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    font-size: 13px;
+  }
+  /* trilho com um evento descendo */
+  .arch__flow::before {
+    content: '';
+    position: absolute;
+    left: 22px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: linear-gradient(var(--line-strong), var(--line-strong));
+  }
+  .arch__flow::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(255, 92, 147, 0.25), 0 0 16px #ff5c93;
+    animation: descend 4.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  @keyframes descend {
+    0% { transform: translateY(0); opacity: 0; }
+    8% { opacity: 1; }
+    92% { opacity: 1; }
+    100% { transform: translateY(var(--arch-h, 420px)); opacity: 0; }
+  }
+  .arch__node {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+  }
+  .arch__node strong {
+    font-size: 14px;
+  }
+  .arch__node span {
+    font-size: 11px;
+    color: var(--subtle);
+  }
+  .arch__node--store {
+    border-style: dashed;
+    border-color: var(--line-strong);
+  }
+  .arch__node--accent {
+    border: 0;
+    background: var(--grad-soft);
+    color: var(--on-grad);
+    box-shadow: 0 0 40px -8px rgba(255, 61, 127, 0.6);
+  }
+  .arch__node--accent span {
+    color: var(--on-grad);
+    opacity: 0.8;
+  }
+  .arch__node--end {
+    border-color: rgba(255, 162, 77, 0.6);
+  }
+  .arch__group {
+    position: relative;
+    z-index: 1;
+    padding: 22px 12px 12px;
+    border-radius: 22px;
+    border: 1px solid var(--line);
+  }
+  .arch__group-label {
+    position: absolute;
+    top: -9px;
+    left: 16px;
+    padding: 0 8px;
+    background: var(--surface);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .arch__group ol {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* garantias */
+  .guarantees {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .guarantee {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 26px;
+    transition: transform 0.4s var(--ease-out), border-color 0.4s;
+  }
+  .guarantee:hover {
+    transform: translateY(-4px);
+    border-color: var(--line-strong);
+  }
+  .guarantee__kicker {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .guarantee:nth-child(1) .guarantee__kicker { color: var(--accent-1); }
+  .guarantee:nth-child(2) .guarantee__kicker { color: var(--accent-2); }
+  .guarantee:nth-child(3) .guarantee__kicker { color: var(--accent-3); }
+  .guarantee:nth-child(4) .guarantee__kicker { color: var(--accent-1); }
+  .guarantee__title {
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .guarantee__body {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* voluntariado */
+  .vol {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 28px;
+    align-items: center;
+    padding: clamp(24px, 3.5vw, 40px);
+  }
+  .vol__org {
+    margin-top: 12px;
+    font-size: clamp(22px, 2.6vw, 30px);
+    font-weight: 600;
+  }
+  .vol__role {
+    margin-top: 6px;
+    font-size: 15px;
+    color: var(--text-2);
+  }
+  .vol__desc {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .vol__stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .vol__stats li {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: var(--glass);
+    border: 1px solid var(--line);
+  }
+  .vol__value {
+    font-size: 24px;
+    font-weight: 800;
+  }
+  .vol__label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  @media (max-width: 1000px) {
+    .guarantees {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 860px) {
+    .ec__inner,
+    .vol {
+      grid-template-columns: 1fr;
+    }
+    .arch {
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
+  }
+  @media (max-width: 560px) {
+    .guarantees {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .arch__flow::after {
+      display: none;
+    }
+  }
+</style>
+
+<script>
+  // altura do trilho para a animação do evento descendo
+  const flow = document.querySelector<HTMLElement>('.arch__flow');
+  if (flow) {
+    const set = () => flow.style.setProperty('--arch-h', `${flow.offsetHeight - 10}px`);
+    set();
+    new ResizeObserver(set).observe(flow);
+  }
+</script>
