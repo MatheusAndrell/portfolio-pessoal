@@ -21,24 +21,6 @@ npm run preview   # serve o build
 npm run check     # checagem de tipos (astro check)
 ```
 
-## Publicando na Vercel
-
-**Pelo painel**
-
-1. Suba o projeto para um repositório no GitHub.
-2. Em [vercel.com/new](https://vercel.com/new), importe o repositório. A Vercel detecta Astro sozinha: build `npm run build`, saída `dist`.
-3. Clique em **Deploy**.
-
-**Pela CLI**
-
-```bash
-npm i -g vercel
-vercel          # preview
-vercel --prod   # produção
-```
-
-**Domínio próprio:** defina a variável de ambiente `SITE_URL` (ex.: `https://matheusandrell.dev`) em *Settings → Environment Variables*. Ela é usada no canonical, no Open Graph, no `sitemap-index.xml` e no `robots.txt`. Sem ela, o site usa o domínio de produção que a Vercel injeta (`VERCEL_PROJECT_PRODUCTION_URL`).
-
 ## Estrutura
 
 ```
